@@ -1,92 +1,93 @@
-import React, { Component, createRef, Fragment } from "react";
-import logo from "./logo.svg";
-import "./App.css";
+import React, { Component } from "react";
 
-class App extends Component {
+class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.toogleContainer = createRef();
-    this.state = { isOpen: false };
-    this.timeOutId = null;
+    this.state = { error: null, errorInfo: null };
   }
 
-  componentDidMount() {
-    // window.addEventListener("click", this.onCLickOutsideHandler);
-  }
-
-  componentWillUnmount() {
-    // window.removeEventListener("click", this.onCLickOutsideHandler);
-  }
-
-  onClickHandler = () => {
-    this.setState(currentState => ({ isOpen: !currentState.isOpen }));
-  };
-
-  // We close the popover on the next tick by using setTimeout.
-  // This is necessary because we need to first check if
-  // another child of the element has received focus as
-  // the blur event fires prior to the new focus event.
-  onBlurHandler = () => {
-    this.timeOutId = setTimeout(() => {
-      this.setState({
-        isOpen: false
-      });
+  componentDidCatch(error, errorInfo) {
+    this.setState({
+      error,
+      errorInfo
     });
-  };
-
-  // If a child receives focus, do not close the popover.
-  onFocusHandler = () => {
-    clearTimeout(this.timeOutId);
-  };
-
-  onCLickOutsideHandler = event => {
-    const { isOpen } = this.state;
-
-    isOpen &&
-      !this.toogleContainer.current.contains(event.target) &&
-      this.setState({ isOpen: false });
-  };
+  }
 
   render() {
-    // React assists us by bubbling the blur and
-    // focus events to the parent.
-    const { isOpen } = this.state;
-    return (
-      // <div className="App" ref={this.toogleContainer}>
-      //   <button onClick={this.onClickHandler}>Select an option</button>
-      <Fragment>
-        <div
-          className="App"
-          onBlur={this.onBlurHandler}
-          onFocus={this.onFocusHandler}
-        >
-          <button
-            onClick={this.onClickHandler}
-            aria-haspopup="true"
-            aria-expanded={this.state.isOpen}
-          >
-            Select an option
-          </button>
-          {isOpen ? (
-            <ul>
-              <li>Option 1</li>
-              <li>Option 2</li>
-              <li>Option 3</li>
-            </ul>
-          ) : null}
+    if (this.state.errorInfo) {
+      console.log(this.state.errorInfo);
+      return (
+        <div>
+          <h2>Something went wrong :(</h2>
+          <details style={{ whiteSpace: "pre-wrap" }}>
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.errorInfo.componentStack}
+          </details>
         </div>
-        <div className="App">
-          <button
-            onClick={this.onClickHandler}
-            aria-haspopup="true"
-            aria-expanded={this.state.isOpen}
-          >
-            Select an option
-          </button>
-        </div>
-      </Fragment>
-    );
+      );
+    }
+    return this.props.children;
   }
+}
+
+class BuggyCounter extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { counter: 0 };
+    this.handleCLick = this.handleCLick.bind(this);
+  }
+
+  handleCLick() {
+    this.setState(({ counter }) => ({
+      counter: counter + 1
+    }));
+  }
+
+  render() {
+    if (this.state.counter === 5) {
+      throw new Error("I Crashed");
+    }
+    return <h1 onClick={this.handleCLick}>{this.state.counter}</h1>;
+  }
+}
+
+function App() {
+  return (
+    <div>
+      <p>
+        <b>
+          This is an example of error boundaries in React 16.
+          <br />
+          <br />
+          Click on the numbers to increase the counters.
+          <br />
+          The counter is programmed to throw when it reaches 5. This simulates a
+          JavaScript error in a component
+        </b>
+      </p>
+      <hr />
+      <ErrorBoundary>
+        <p>
+          These two counters are inside the same error boundary. If one crashes,
+          the error boundary wil replace both of them.
+        </p>
+        <BuggyCounter />
+        <BuggyCounter />
+      </ErrorBoundary>
+      <hr />
+      <p>
+        These two counters are each inside of their own error boundary. So if
+        one crashes, the other is not affected.
+      </p>
+      <ErrorBoundary>
+        <BuggyCounter />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <BuggyCounter />
+      </ErrorBoundary>
+    </div>
+  );
 }
 
 export default App;
